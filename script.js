@@ -1,6 +1,7 @@
 // 1. IMPORTAÇÕES DO FIREBASE (Usando a versão estável 10.8.0)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 // 2. CONFIGURAÇÃO DO FIREBASE (Com as tuas chaves)
 const firebaseConfig = {
@@ -12,9 +13,11 @@ const firebaseConfig = {
   appId: "1:125454256582:web:06af323d24ae80a0648ac7"
 };
 
-// Inicializa a aplicação e o banco de dados (Firestore)
+// Inicializa a aplicação, o banco de dados (Firestore) e a autenticação
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
 // Seletores para os elementos HTML originais
 const pokemonName = document.querySelector('.pokemon__name');
@@ -38,9 +41,21 @@ const buttonNext = document.querySelector('.btn-next');
 const btnSaveFavorite = document.querySelector('.btn-save-favorite');
 const favoritesList = document.getElementById('favorites-list');
 
+// Seletores da tela de login
+const loginOverlay   = document.getElementById('loginOverlay');
+const btnLoginGoogle = document.getElementById('btnLoginGoogle');
+const userBar        = document.getElementById('userBar');
+const userPhoto      = document.getElementById('userPhoto');
+const userName       = document.getElementById('userName');
+const btnLogout      = document.getElementById('btnLogout');
+const favoritesHint  = document.getElementById('favoritesHint');
+
 // Variável atualizada para guardar a imagem do Pokémon para o banco de dados
 let currentPokemon = { id: 1, name: 'bulbasaur', sprite: '' };
 let nextEvolutionName = null;
+
+// Usuário logado atual (null = deslogado)
+let currentUser = null;
 
 // Função genérica para buscar da API
 const fetchAPI = async (url) => {
@@ -256,15 +271,63 @@ buttonNext.addEventListener('click', () => {
 });
 
 // ==========================================
-// FUNÇÕES DE CRUD (FIREBASE)
+// AUTENTICAÇÃO (GOOGLE)
+// ==========================================
+
+// Login com Google
+btnLoginGoogle.addEventListener('click', async () => {
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (error) {
+    console.error('Erro no login:', error);
+    alert('Não foi possível entrar com Google. Tenta novamente.');
+  }
+});
+
+// Logout
+btnLogout.addEventListener('click', async () => {
+  try {
+    await signOut(auth);
+  } catch (error) {
+    console.error('Erro ao sair:', error);
+  }
+});
+
+// Observa o estado de autenticação
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+
+  if (user) {
+    // Logado: esconde overlay, mostra barra
+    loginOverlay.classList.add('hidden');
+    userBar.style.display = 'flex';
+    userPhoto.src = user.photoURL || '';
+    userName.textContent = user.displayName || user.email;
+    favoritesHint.textContent = `Favoritos de ${user.displayName || user.email}`;
+    loadFavorites(); // carrega favoritos do usuário
+  } else {
+    // Deslogado: mostra overlay, esconde barra
+    loginOverlay.classList.remove('hidden');
+    userBar.style.display = 'none';
+    favoritesList.innerHTML = '<p>Inicia sessão para ver os teus favoritos.</p>';
+  }
+});
+
+// ==========================================
+// FUNÇÕES DE CRUD (FIREBASE) - POR USUÁRIO
 // ==========================================
 
 // C - CREATE (Cadastrar Novo Favorito)
 btnSaveFavorite.addEventListener('click', async () => {
+  if (!currentUser) {
+    alert('Inicia sessão com Google para guardar favoritos.');
+    return;
+  }
   if (!currentPokemon.name) return; // Segurança
 
   try {
     await addDoc(collection(db, "favoritos"), {
+      userId: currentUser.uid, // vincula ao usuário
       id: currentPokemon.id,
       name: currentPokemon.name,
       sprite: currentPokemon.sprite,
@@ -278,12 +341,22 @@ btnSaveFavorite.addEventListener('click', async () => {
   }
 });
 
-// R - READ (Consultar e Listar os Favoritos)
+// R - READ (Consultar e Listar os Favoritos do usuário logado)
 const loadFavorites = async () => {
+  if (!currentUser) {
+    favoritesList.innerHTML = '<p>Inicia sessão para ver os teus favoritos.</p>';
+    return;
+  }
+
   favoritesList.innerHTML = "A carregar os teus Pokémon...";
   
   try {
-    const querySnapshot = await getDocs(collection(db, "favoritos"));
+    // Filtra apenas os favoritos do usuário logado
+    const q = query(
+      collection(db, "favoritos"),
+      where("userId", "==", currentUser.uid)
+    );
+    const querySnapshot = await getDocs(q);
     favoritesList.innerHTML = ""; 
 
     if (querySnapshot.empty) {
@@ -321,7 +394,6 @@ const loadFavorites = async () => {
 };
 
 // U - UPDATE (Atualizar Apelido)
-// Colocamos no "window." porque criámos o botão com o evento onclick no HTML dinâmico acima
 window.updateFavorite = async (dbId) => {
   const novoApelido = prompt("Que apelido gostarias de dar a este Pokémon?");
   
@@ -350,6 +422,6 @@ window.deleteFavorite = async (dbId) => {
   }
 };
 
-// Inicia a Pokédex renderizando o Pokémon inicial e carregando os favoritos
+// Inicia a Pokédex renderizando o Pokémon inicial
+// (O carregamento dos favoritos é feito automaticamente pelo onAuthStateChanged)
 renderPokemon(currentPokemon.id);
-loadFavorites();
