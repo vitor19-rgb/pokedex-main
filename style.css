@@ -1,0 +1,318 @@
+@import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@300;400;500;600;700;800&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Oxanium', cursive;
+}
+
+body {
+  text-align: center;
+  background: linear-gradient(to bottom, #6ab7f5, #fff);
+  min-height: 100vh;
+}
+
+main {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 15px;
+  position: relative;
+}
+
+.pokedex {
+  width: 100%;
+  max-width: 425px;
+}
+
+.pokemon__image {
+  position: absolute;
+  bottom: 55%;
+  left: 50%;
+  transform: translate(-63%, 20%);
+  height: 18%;
+}
+
+.pokemon__data {
+  position: absolute;
+  font-weight: 600;
+  color: #aaa;
+  top: 54.5%;
+  right: 27%;
+  font-size: clamp(8px, 5vw, 25px);
+}
+
+.pokemon__name {
+  color: #3a444d;
+  text-transform: capitalize;
+}
+
+.form {
+  position: absolute;
+  width: 65%;
+  top: 65%;
+  left: 13.5%;
+}
+
+.input__search {
+  width: 100%;
+  padding: 4%;
+  outline: none;
+  border: 2px solid #333;
+  border-radius: 5px;
+  font-weight: 600;
+  color: #3a444d;
+  font-size: clamp(8px, 5vw, 1rem);
+  box-shadow: -3px 4px 0 #888, -5px 7px 0 #333
+}
+
+/* --- BOTÕES DE NAVEGAÇÃO --- */
+.buttons {
+  position: absolute;
+  bottom: 10%;
+  left: 50%;
+  width: 65%;
+  transform: translate(-57%, 0);
+  display: flex;
+  gap: 20px;
+}
+
+.button {
+  width: 50%;
+  padding: 4%;
+  border: 2px solid #000;
+  border-radius: 5px;
+  font-size: clamp(8px, 5vw, 1rem);
+  font-weight: 600;
+  color: white;
+  background-color: #444; /* Cor preta para Prev/Next */
+  box-shadow: -2px 3px 0 #222, -4px 6px 0 #000;
+  cursor: pointer;
+}
+
+.button:active {
+  box-shadow: inset -4px 4px 0 #222;
+  font-size: 0.9rem;
+}
+
+/* --- NOVO ESTILO PARA O BOTÃO DE EVOLUÇÃO GRANDE (AJUSTADO) --- */
+.evolution-container {
+  position: absolute;
+  /* Ajustado para ficar mais baixo e centralizado horizontalmente */
+  top: 73%; /* Posição acima dos botões prev/next e abaixo do input */
+  left: 50%;
+  transform: translateX(-50%); /* Centraliza perfeitamente */
+  width: 65%; /* Mesma largura dos botões de navegação */
+  max-width: 250px; /* Limite para não ficar muito largo em ecrãs grandes */
+  z-index: 10; /* Garante que ele fique acima de outros elementos se houver sobreposição */
+}
+
+.btn-evolution {
+  width: 120%; /* Ocupa 100% do seu novo contentor */
+  font-size: clamp(10px, 5vw, 1.1rem);
+  margin-left: -30px;
+  margin-top: 5px;
+  
+  background-color: #444; /* AGORA É PRETO, IGUAL AOS OUTROS */
+}
+@media (max-width: 500px) {
+  .btn-evolution {
+    width: 60%;
+    padding: 3% 6%;
+    margin-top: 10px;
+    transform: translateY(5px) !important;
+  }
+}
+
+
+/* --- CAIXA DE INFORMAÇÕES DO POKÉMON --- */
+.pokemon-info-box {
+  display: none;
+  flex-direction: column;
+  gap: 15px;
+  width: 90%;
+  max-width: 425px;
+  margin: 5px auto;
+  padding: 20px;
+  background: #dedede;
+  border: 2px solid #3a444d;
+  border-radius: 10px;
+  box-shadow: -3px 4px 0 #888, -5px 7px 0 #333;
+  color: #3a444d;
+  font-size: clamp(12px, 3vw, 16px);
+  text-align: left;
+}
+
+.pokemon-info-box p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.pokemon__types span {
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+.pokemon__description span {
+  text-align: justify;
+}
+
+.pokemon__location {
+  font-style: italic;
+}
+
+/* --- ANIMAÇÃO DE EVOLUÇÃO --- */
+.evolving {
+  animation: evolve-transform 0.8s ease-in-out, evolve-flash 0.5s ease-in-out 3;
+}
+
+@keyframes evolve-flash {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(5) drop-shadow(0 0 15px white);
+  }
+}
+
+@keyframes evolve-transform {
+  0% {
+    transform: translate(-63%, 20%) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-63%, 20%) scale(1.2);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(-63%, 20%) scale(1.5);
+    opacity: 0;
+  }
+}
+/* --- ESTILOS PARA A FUNCIONALIDADE MEGA EVOLUÇÃO --- */
+.mega-container {
+  display: flex; /* Para alinhar os botões lado a lado */
+  justify-content: center; /* Centraliza os botões */
+  gap: 10px; /* Espaço entre os botões (caso haja 2) */
+  margin-top: 10px;
+}
+
+.btn-mega, .btn-revert {
+  width: 45%; /* Cada botão ocupa quase metade do espaço */
+  padding: 10px;
+  border: 2px solid #000;
+  border-radius: 5px;
+  font-size: clamp(12px, 3vw, 1rem);
+  font-weight: 600;
+  color: white;
+  background-color: #c0392b; /* Um tom de vermelho para destacar */
+  box-shadow: -2px 3px 0 #222, -4px 6px 0 #000;
+  cursor: pointer;
+}
+
+/* Caso haja apenas 1 botão, ele ocupa o espaço todo */
+.mega-container button:only-child  {
+  width: 100%;
+}
+
+.btn-mega:active, .btn-revert:active {
+  box-shadow: inset -4px 4px 0 #222;
+  font-size: 0.9rem;
+}
+/* --- ESTILOS PARA DYNAMAX / GIGANTAMAX --- */
+.gmax-container {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btn-gmax {
+  width: 45%;
+  padding: 10px;
+  border: 2px solid #000;
+  border-radius: 5px;
+  font-size: clamp(12px, 3vw, 1rem);
+  font-weight: 600;
+  color: white;
+  background-color: #e75480; /* Cor rosa choque para destacar */
+  box-shadow: -2px 3px 0 #222, -4px 6px 0 #000;
+  cursor: pointer;
+}
+
+.gmax-container button:only-child {
+  width: 100%;
+}
+
+.btn-gmax:active {
+  box-shadow: inset -4px 4px 0 #222;
+  font-size: 0.9rem;
+}
+
+/* --- ANIMAÇÃO DE GIGANTAMAX --- */
+.gigantamaxing {
+  /* A animação aumenta o tamanho e move a imagem para cima */
+  animation: grow-and-shake 1.5s ease-in-out;
+  /* Garante que a imagem fique por cima da Pokedex */
+  z-index: 100; 
+}
+
+@keyframes grow-and-shake {
+  0% {
+    transform: translate(-63%, 20%) scale(1);
+  }
+  50% {
+    transform: translate(-63%, -10%) scale(2); /* Aumenta 2x e sobe */
+  }
+  60% { transform: translate(-63%, -10%) scale(2) rotate(2deg); }
+  70% { transform: translate(-63%, -10%) scale(2) rotate(-2deg); }
+  80% { transform: translate(-63%, -10%) scale(2) rotate(2deg); }
+  100% {
+    transform: translate(-63%, -10%) scale(2); /* Mantém o tamanho final */
+  }
+}
+/* --- ESTILO PARA BOTÕES DESATIVADOS --- */
+.button:disabled {
+  opacity: 0.5; /* Deixa o botão com 50% de transparência */
+  cursor: not-allowed; /* Mostra um cursor de "proibido" */
+  box-shadow: -2px 3px 0 #222, -4px 6px 0 #000; /* Garante que a sombra não mude */
+}
+/* --- NOVA E MELHORADA ANIMAÇÃO PARA MEGA EVOLUÇÃO --- */
+.mega-evolving {
+  /* Animação de brilho inicial, rotação e crescimento */
+  animation: mega-burst 1s ease-in-out forwards;
+  z-index: 100; /* Garante que fique acima da pokedex */
+}
+
+@keyframes mega-burst {
+  0% {
+    transform: translate(-63%, 20%) scale(1) rotate(0deg);
+    opacity: 1;
+    filter: brightness(1);
+  }
+  20% {
+    transform: translate(-63%, 20%) scale(1.05) rotate(5deg);
+    opacity: 0.8;
+    filter: brightness(3) drop-shadow(0 0 20px #FFD700); /* Brilho dourado */
+  }
+  40% {
+    transform: translate(-63%, 20%) scale(1.1) rotate(-5deg);
+    opacity: 0.5;
+    filter: brightness(5) drop-shadow(0 0 30px #FFD700); /* Brilho mais intenso */
+  }
+  60% {
+    transform: translate(-63%, 20%) scale(1.2) rotate(5deg);
+    opacity: 0.2; /* Quase transparente */
+    filter: brightness(7) drop-shadow(0 0 40px #FFD700); /* Brilho máximo */
+  }
+  80% {
+    transform: translate(-63%, 20%) scale(1.15) rotate(-5deg);
+    opacity: 0.8; /* Reaparece rapidamente */
+    filter: brightness(5) drop-shadow(0 0 30px #FFD700);
+  }
+  100% {
+    transform: translate(-63%, 20%) scale(1);
+    opacity: 1;
+    filter: brightness(1); /* Volta ao normal */
+  }
+}

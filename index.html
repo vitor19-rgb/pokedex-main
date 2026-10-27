@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="favicon-16x16.png">
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Estilos internos para corrigir o alinhamento da Pokédex e do Firebase -->
+    <style>
+        /* Estilos do CRUD de Favoritos (Secção inferior da página) */
+        .favorites-section {
+            margin-top: 30px; padding: 20px; background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px; max-width: 400px; margin-left: auto; margin-right: auto; text-align: center;
+        }
+        .favorite-card {
+            border: 1px solid #ccc; border-radius: 8px; padding: 10px; margin: 10px 0;
+            display: flex; justify-content: space-between; align-items: center; background: white;
+        }
+        .btn-crud {
+            padding: 5px 10px; margin: 2px; cursor: pointer; border: none;
+            border-radius: 4px; background: #4CAF50; color: white; font-weight: bold;
+        }
+        .btn-crud.delete { background: #f44336; }
+        .btn-crud.edit { background: #2196F3; }
+
+        /* ========================================= */
+        /* CSS PARA EMPILHAR E AJUSTAR OS BOTÕES     */
+        /* ========================================= */
+        
+        /* 1. Recipiente principal que agrupa todos os botões */
+        .pokedex-controls {
+            position: absolute;
+            bottom: 8%; 
+            left: 45%;
+            transform: translateX(-50%);
+            width: 65%; /* Largura da tela cinzenta da Pokédex */
+            display: flex;
+            flex-direction: column; /* Organiza os botões em coluna */
+            gap: 5px; /* Espaço compacto entre as linhas */
+            z-index: 10;
+        }
+
+        /* 2. Anulamos o posicionamento original do style.css para o contentor de evolução e botões */
+        .evolution-container {
+            position: static !important;
+            transform: none !important;
+            margin: 0 !important;
+            width: 100% !important;
+        }
+
+        .button {
+            position: static !important; 
+            transform: none !important;
+            margin: 0 !important;
+            width: 100%;
+            padding: 8px !important; 
+            font-size: 13px !important; 
+        }
+
+        /* 3. Recipiente para a linha de Anterior e Próximo ficarem lado a lado */
+        .buttons-row {
+            display: flex;
+            gap: 5px; 
+            width: 100%;
+        }
+
+        .buttons-row .button {
+            width: 50%; /* Cada botão ocupa metade do espaço */
+        }
+
+        /* 4. Estilo personalizado do botão de Favorito para combinar com o design */
+        .btn-save-favorite {
+            width: 100%;
+            padding: 8px; 
+            background-color: #ffcb05;
+            color: #333;
+            font-weight: bold;
+            border: 2px solid #000;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: -2px 3px 0 #000, -4px 6px 0 #000;
+            font-size: 13px; 
+        }
+        .btn-save-favorite:active {
+            box-shadow: inset -4px 4px 0 #222;
+        }
+    </style>
+
+    <!-- O script agora é type="module" para suportar o Firebase -->
+    <script type="module" defer src="script.js"></script>
+    <title>Pokédex</title>
+</head>
+<body>
+    <main>
+        <!-- Tela da Pokédex (Imagem e Textos) -->
+        <img src="#" alt="pokemon" class="pokemon__image">
+
+        <h1 class="pokemon__data">
+          <span class="pokemon__number"></span> -
+          <span class="pokemon__name notranslate"></span>
+        </h1>
+
+        <form class="form">
+            <input type="search" class="input__search" placeholder="Name or Number" required>
+        </form>
+    
+        <!-- ======================================================= -->
+        <!-- CAIXA FLEXBOX QUE ORGANIZA OS BOTÕES NA ORDEM CORRETA   -->
+        <!-- ======================================================= -->
+        <div class="pokedex-controls">
+            
+            <!-- LINHA 1: Botão de Evolução (Agora devidamente posicionado no topo) -->
+            <div class="evolution-container">
+                <button class="button btn-evolution">Evolução</button>
+            </div>
+
+            <!-- LINHA 2: Anterior e Próximo (agrupados lado a lado) -->
+            <div class="buttons-row">
+                <button class="button btn-prev">&lt; Anterior</button>
+                <button class="button btn-next">Próximo &gt;</button>
+            </div>
+
+            <!-- LINHA 3: Botão de Guardar Favorito (Firebase) -->
+            <button class="btn-save-favorite">❤️ Guardar Favorito</button>
+            
+        </div>
+
+        <img src="pokedex.png" alt="pokedex" class="pokedex">
+    </main>
+ 
+    <!-- Caixa para formas especiais (Mega e G-Max) -->
+    <section class="pokemon-info-box">
+        <p class="pokemon__types"><span></span></p>
+        <p class="pokemon__description"><span></span></p>
+        <p class="pokemon__location"><span></span></p>
+
+        <div class="mega-container"></div>
+        <div class="gmax-container"></div>
+    </section>
+
+    <!-- Container do CRUD para ler, atualizar e deletar os favoritos -->
+    <section class="favorites-section">
+        <h2>Meus Favoritos</h2>
+        <div id="favorites-list">Carregando...</div>
+    </section>
+ </body>
+</html>
