@@ -3,7 +3,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// 2. CONFIGURAÇÃO DO FIREBASE (Com as tuas chaves)
+// 2. CONFIGURAÇÃO DO FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyCy9VwC8m6uzl83hECYy14-JeMYkpCnZ94",
   authDomain: "pokedex-c1af3.firebaseapp.com",
@@ -13,13 +13,12 @@ const firebaseConfig = {
   appId: "1:125454256582:web:06af323d24ae80a0648ac7"
 };
 
-// Inicializa a aplicação, o banco de dados (Firestore) e a autenticação
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// Seletores para os elementos HTML originais
+// Seletores
 const pokemonName = document.querySelector('.pokemon__name');
 const pokemonNumber = document.querySelector('.pokemon__number');
 const pokemonImage = document.querySelector('.pokemon__image');
@@ -37,11 +36,9 @@ const input = document.querySelector('.input__search');
 const buttonPrev = document.querySelector('.btn-prev');
 const buttonNext = document.querySelector('.btn-next');
 
-// Seletores para os elementos do Firebase (CRUD)
 const btnSaveFavorite = document.querySelector('.btn-save-favorite');
 const favoritesList = document.getElementById('favorites-list');
 
-// Seletores da tela de login
 const loginOverlay   = document.getElementById('loginOverlay');
 const btnLoginGoogle = document.getElementById('btnLoginGoogle');
 const userBar        = document.getElementById('userBar');
@@ -50,20 +47,18 @@ const userName       = document.getElementById('userName');
 const btnLogout      = document.getElementById('btnLogout');
 const favoritesHint  = document.getElementById('favoritesHint');
 
-// Variável atualizada para guardar a imagem do Pokémon para o banco de dados
+// Estado
 let currentPokemon = { id: 1, name: 'bulbasaur', sprite: '' };
 let nextEvolutionName = null;
-
-// Usuário logado atual (null = deslogado)
 let currentUser = null;
+let basePokemonId = 1;   // guarda a forma base para o botão Reverter
 
-// Função genérica para buscar da API
+// ============ API ============
 const fetchAPI = async (url) => {
   const response = await fetch(url);
   if (response.status === 200) return response.json();
 }
 
-// Função para tocar o som do Pokémon
 const playCry = (cryUrl) => {
   if (cryUrl) {
     const cry = new Audio(cryUrl);
@@ -72,7 +67,7 @@ const playCry = (cryUrl) => {
   }
 }
 
-// Função para exibir as informações do Pokémon
+// ============ DISPLAY ============
 const displayPokemonInfo = async (data) => {
   buttonPrev.disabled = false;
   buttonNext.disabled = false;
@@ -90,12 +85,16 @@ const displayPokemonInfo = async (data) => {
 
   const types = data.types.map(typeInfo => typeInfo.type.name);
   pokemonTypes.innerHTML = `Tipo: ${types.join(' | ')}`;
-  pokemonLocation.innerHTML = (encounterData && encounterData.length > 0) ? `Local: ${encounterData[0].location_area.name.replace(/-/g, ' ')}` : 'Local: Não encontrado na natureza.';
+  pokemonLocation.innerHTML = (encounterData && encounterData.length > 0)
+    ? `Local: ${encounterData[0].location_area.name.replace(/-/g, ' ')}`
+    : 'Local: Não encontrado na natureza.';
 
   if (speciesData) {
     const flavorTextEntry = speciesData.flavor_text_entries.find(entry => entry.language.name === 'en');
-    pokemonDescription.innerHTML = flavorTextEntry ? flavorTextEntry.flavor_text.replace(/[\n\f]/g, ' ') : 'Descrição não disponível.';
-    
+    pokemonDescription.innerHTML = flavorTextEntry
+      ? flavorTextEntry.flavor_text.replace(/[\n\f]/g, ' ')
+      : 'Descrição não disponível.';
+
     handleEvolutions(speciesData, data.name);
     handleMegaEvolutions(speciesData);
     handleGigantamax(speciesData);
@@ -104,33 +103,37 @@ const displayPokemonInfo = async (data) => {
   const gen5Sprite = data.sprites.versions['generation-v']['black-white'].animated.front_default;
   const animatedSprite = data.sprites.other.showdown.front_default;
   const staticSprite = data.sprites.other['official-artwork'].front_default;
-  
+
   pokemonImage.src = gen5Sprite || animatedSprite || staticSprite;
   pokemonImage.onerror = () => { pokemonImage.src = staticSprite; };
   pokemonImage.style.transform = '';
+  pokemonImage.style.filter = '';
 
-  // Atualiza o objeto currentPokemon com a imagem para guardarmos no Firebase
-  currentPokemon = { 
-    id: data.id, 
-    name: data.name, 
-    sprite: staticSprite || data.sprites.front_default 
+  currentPokemon = {
+    id: data.id,
+    name: data.name,
+    sprite: staticSprite || data.sprites.front_default
   };
+
+  // Guarda o ID da forma base para o Reverter
+  basePokemonId = data.id;
 
   playCry(data.cries.latest);
 }
 
-// Função para renderizar o Pokémon
 const renderPokemon = async (pokemonIdentifier) => {
-  pokemonImage.classList.remove('evolving', 'mega-evolving', 'gigantamaxing'); 
+  pokemonImage.classList.remove('evolving', 'mega-evolving', 'gigantamaxing');
   pokemonImage.style.transform = '';
+  pokemonImage.style.filter = '';
 
-  const isTransforming = pokemonImage.classList.contains('evolving') || pokemonImage.classList.contains('mega-evolving');
+  const isTransforming = pokemonImage.classList.contains('evolving')
+                       || pokemonImage.classList.contains('mega-evolving');
   if (!isTransforming) { pokemonImage.style.display = 'none'; }
-  
+
   infoBox.style.display = 'none';
   pokemonName.innerHTML = 'Loading...';
   pokemonNumber.innerHTML = '';
-  
+
   const data = await fetchAPI(`https://pokeapi.co/api/v2/pokemon/${pokemonIdentifier.toString().toLowerCase()}`);
 
   if (data) {
@@ -141,7 +144,7 @@ const renderPokemon = async (pokemonIdentifier) => {
   }
 }
 
-// Funções de formas especiais (Mantidas iguais ao teu código)
+// ============ EVOLUÇÕES ============
 const handleEvolutions = async (speciesData, pokemonName) => {
   nextEvolutionName = null;
   const evolutionChainResponse = await fetchAPI(speciesData.evolution_chain.url);
@@ -157,7 +160,7 @@ const handleEvolutions = async (speciesData, pokemonName) => {
 const handleMegaEvolutions = (speciesData) => {
   megaContainer.innerHTML = '';
   const megaVarieties = speciesData.varieties.filter(v => v.pokemon.name.includes('-mega') && !v.is_default);
-  
+
   if (megaVarieties.length > 0) {
     megaVarieties.forEach(mega => {
       const megaButton = document.createElement('button');
@@ -172,7 +175,7 @@ const handleMegaEvolutions = (speciesData) => {
 const handleGigantamax = (speciesData) => {
   gmaxContainer.innerHTML = '';
   const gmaxVariety = speciesData.varieties.find(v => v.pokemon.name.includes('-gmax'));
-  
+
   if (gmaxVariety) {
     const gmaxButton = document.createElement('button');
     gmaxButton.className = 'btn-gmax button';
@@ -196,7 +199,7 @@ const triggerFormChange = async (formName, animationClass, isGigantamax = false)
   }
 
   pokemonImage.classList.add(animationClass);
-  
+
   setTimeout(async () => {
     pokemonImage.classList.remove(animationClass);
     if (!formSpecificData) formSpecificData = await fetchAPI(`https://pokeapi.co/api/v2/pokemon/${formName}`);
@@ -207,35 +210,60 @@ const triggerFormChange = async (formName, animationClass, isGigantamax = false)
       gmaxContainer.style.display = 'none';
       buttonPrev.disabled = true;
       buttonNext.disabled = true;
-      
+
       pokemonName.innerHTML = formSpecificData.name.replace(/-/g, ' ');
       pokemonNumber.innerHTML = '';
       const types = formSpecificData.types.map(typeInfo => typeInfo.type.name);
       pokemonTypes.innerHTML = `Tipo: ${types.join(' | ')}`;
 
-      if (!isGigantamax) {
-        const animatedSprite = formSpecificData.sprites.other.showdown.front_default;
-        const staticSprite = formSpecificData.sprites.other['official-artwork'].front_default;
-        pokemonImage.src = animatedSprite || staticSprite;
+      // ---- ATUALIZA O SPRITE (Mega E Gigantamax) ----
+      const animatedSprite = formSpecificData.sprites.other?.showdown?.front_default;
+      const officialArt    = formSpecificData.sprites.other?.['official-artwork']?.front_default;
+      const homeSprite     = formSpecificData.sprites.other?.home?.front_default;
+      const defaultSprite  = formSpecificData.sprites.front_default;
+
+      const newSprite = animatedSprite || officialArt || homeSprite || defaultSprite;
+      if (newSprite) {
+        pokemonImage.src = newSprite;
       }
-      
-      // Atualiza o currentPokemon para permitir guardar a Mega/GMax também
+
+      // Limpa qualquer transform residual antes de decidir o próximo
+      pokemonImage.style.transform = '';
+
+      // Se for G-Max, aplica o scale(2) manualmente (a animação já terminou)
+      if (isGigantamax) {
+        pokemonImage.style.transform = 'translate(-63%, -10%) scale(2)';
+      }
+
+      // currentPokemon agora é a forma especial (para salvar como favorito)
+      // MAS o basePokemonId continua a ser o ID original
       currentPokemon = {
         id: formSpecificData.id,
         name: formSpecificData.name,
-        sprite: formSpecificData.sprites.other['official-artwork'].front_default || formSpecificData.sprites.front_default
+        sprite: officialArt || defaultSprite
       };
 
+      // ---- BOTÃO REVERTER ----
       const revertButton = document.createElement('button');
       revertButton.className = 'btn-revert button';
       revertButton.innerText = 'Reverter';
       revertButton.addEventListener('click', () => {
+        // Restaura a UI
         evolutionContainer.style.display = 'block';
         megaContainer.style.display = 'flex';
         gmaxContainer.style.display = 'flex';
-        renderPokemon(currentPokemon.id); // Volta à forma normal
+        buttonPrev.disabled = false;
+        buttonNext.disabled = false;
+
+        // Limpa estilos residuais da animação (G-Max deixa scale(2) inline)
+        pokemonImage.style.transform = '';
+        pokemonImage.style.filter = '';
+        pokemonImage.classList.remove('mega-evolving', 'gigantamaxing', 'evolving');
+
+        // Volta à forma BASE (não à Mega!)
+        renderPokemon(basePokemonId);
       });
-      
+
       megaContainer.innerHTML = '';
       megaContainer.appendChild(revertButton);
       megaContainer.style.display = 'block';
@@ -243,7 +271,7 @@ const triggerFormChange = async (formName, animationClass, isGigantamax = false)
   }, animationDuration);
 }
 
-// Event Listeners base
+// ============ LISTENERS BASE ============
 buttonEvolution.addEventListener('click', () => {
   if (nextEvolutionName) {
     if (pokemonImage.classList.contains('evolving')) return;
@@ -270,11 +298,7 @@ buttonNext.addEventListener('click', () => {
   renderPokemon(currentPokemon.id + 1);
 });
 
-// ==========================================
-// AUTENTICAÇÃO (GOOGLE)
-// ==========================================
-
-// Login com Google
+// ============ AUTENTICAÇÃO ============
 btnLoginGoogle.addEventListener('click', async () => {
   try {
     await signInWithPopup(auth, provider);
@@ -284,7 +308,6 @@ btnLoginGoogle.addEventListener('click', async () => {
   }
 });
 
-// Logout
 btnLogout.addEventListener('click', async () => {
   try {
     await signOut(auth);
@@ -293,55 +316,47 @@ btnLogout.addEventListener('click', async () => {
   }
 });
 
-// Observa o estado de autenticação
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
 
   if (user) {
-    // Logado: esconde overlay, mostra barra
     loginOverlay.classList.add('hidden');
     userBar.style.display = 'flex';
     userPhoto.src = user.photoURL || '';
     userName.textContent = user.displayName || user.email;
     favoritesHint.textContent = `Favoritos de ${user.displayName || user.email}`;
-    loadFavorites(); // carrega favoritos do usuário
+    loadFavorites();
   } else {
-    // Deslogado: mostra overlay, esconde barra
     loginOverlay.classList.remove('hidden');
     userBar.style.display = 'none';
     favoritesList.innerHTML = '<p>Inicia sessão para ver os teus favoritos.</p>';
   }
 });
 
-// ==========================================
-// FUNÇÕES DE CRUD (FIREBASE) - POR USUÁRIO
-// ==========================================
-
-// C - CREATE (Cadastrar Novo Favorito)
+// ============ CRUD ============
 btnSaveFavorite.addEventListener('click', async () => {
   if (!currentUser) {
     alert('Inicia sessão com Google para guardar favoritos.');
     return;
   }
-  if (!currentPokemon.name) return; // Segurança
+  if (!currentPokemon.name) return;
 
   try {
     await addDoc(collection(db, "favoritos"), {
-      userId: currentUser.uid, // vincula ao usuário
+      userId: currentUser.uid,
       id: currentPokemon.id,
       name: currentPokemon.name,
       sprite: currentPokemon.sprite,
-      apelido: "" // Espaço reservado para atualizar o apelido depois
+      apelido: ""
     });
     alert(`O ${currentPokemon.name.toUpperCase()} foi adicionado aos teus favoritos!`);
-    loadFavorites(); // Atualiza a lista na tela
+    loadFavorites();
   } catch (error) {
     console.error("Erro ao guardar favorito: ", error);
     alert("Falha ao salvar no banco de dados.");
   }
 });
 
-// R - READ (Consultar e Listar os Favoritos do usuário logado)
 const loadFavorites = async () => {
   if (!currentUser) {
     favoritesList.innerHTML = '<p>Inicia sessão para ver os teus favoritos.</p>';
@@ -349,15 +364,14 @@ const loadFavorites = async () => {
   }
 
   favoritesList.innerHTML = "A carregar os teus Pokémon...";
-  
+
   try {
-    // Filtra apenas os favoritos do usuário logado
     const q = query(
       collection(db, "favoritos"),
       where("userId", "==", currentUser.uid)
     );
     const querySnapshot = await getDocs(q);
-    favoritesList.innerHTML = ""; 
+    favoritesList.innerHTML = "";
 
     if (querySnapshot.empty) {
       favoritesList.innerHTML = "<p>Ainda não tens favoritos guardados.</p>";
@@ -365,16 +379,14 @@ const loadFavorites = async () => {
     }
 
     querySnapshot.forEach((documento) => {
-      const dbId = documento.id; // O ID único que o Firestore cria
-      const dados = documento.data(); // Os dados que enviámos
-      
+      const dbId = documento.id;
+      const dados = documento.data();
+
       const card = document.createElement('div');
       card.className = 'favorite-card';
-      
-      // Se ele tiver apelido, mostra-o, se não mostra o nome original
+
       const nomeFinal = dados.apelido ? `${dados.name} ("${dados.apelido}")` : dados.name;
 
-      // Criamos a estrutura visual de cada favorito
       card.innerHTML = `
         <div style="display: flex; align-items: center;">
           <img src="${dados.sprite}" alt="${dados.name}" width="50" style="margin-right: 10px;">
@@ -393,22 +405,19 @@ const loadFavorites = async () => {
   }
 };
 
-// U - UPDATE (Atualizar Apelido)
 window.updateFavorite = async (dbId) => {
   const novoApelido = prompt("Que apelido gostarias de dar a este Pokémon?");
-  
-  if (novoApelido === null) return; // Se o utilizador clicar em 'Cancelar'
-  
+  if (novoApelido === null) return;
+
   try {
     const docRef = doc(db, "favoritos", dbId);
     await updateDoc(docRef, { apelido: novoApelido });
-    loadFavorites(); // Atualizamos a lista para mostrar a alteração
+    loadFavorites();
   } catch (error) {
     console.error("Erro ao atualizar:", error);
   }
 };
 
-// D - DELETE (Excluir do banco)
 window.deleteFavorite = async (dbId) => {
   const confirmacao = confirm("Tens a certeza que queres remover este Pokémon dos favoritos?");
   if (!confirmacao) return;
@@ -416,12 +425,11 @@ window.deleteFavorite = async (dbId) => {
   try {
     const docRef = doc(db, "favoritos", dbId);
     await deleteDoc(docRef);
-    loadFavorites(); // Atualizamos a lista após a exclusão
+    loadFavorites();
   } catch (error) {
     console.error("Erro ao deletar:", error);
   }
 };
 
-// Inicia a Pokédex renderizando o Pokémon inicial
-// (O carregamento dos favoritos é feito automaticamente pelo onAuthStateChanged)
+// Inicia
 renderPokemon(currentPokemon.id);
